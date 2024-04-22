@@ -5,8 +5,16 @@ from PIL import Image
 import io
 import boto3
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError
+import logging
 
 app = Flask(__name__)
+
+logging.getLogger('boto3').setLevel(logging.DEBUG)
+logging.getLogger('botocore').setLevel(logging.DEBUG)
+logging.getLogger('s3transfer').setLevel(logging.DEBUG)
+
+region_name = 'eu-west-2'
+bucket_name = 'vegetables-recognition'
 
 # Load your ONNX model
 ort_session = ort.InferenceSession('model.onnx')
@@ -61,31 +69,32 @@ def query_images():
         return jsonify({'response': 'All parameters (quantity, type, color) are required.'}), 400
 
     # Connect to S3 and retrieve files
-    s3_client = boto3.client('s3', region_name='me-central-1')
-    bucket_name = 'vegetables'
-
+    s3_client = boto3.client('s3', region_name=region_name)
     try:
         # Generate prefix based on vegetable type to filter results
         prefix = f"{veg_type}/"
+        print(prefix)
         response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
 
         # Filter files by color and limit by quantity
         matching_files = []
         for obj in response.get('Contents', []):
-            file_color = obj['Key'].split('/')[-1].split('_')[1]  # Assumes file name format "type_color.jpg"
-            if file_color.lower() == color.lower():
-                matching_files.append(f"https://{bucket_name}.s3.me-central-1.amazonaws.com/{obj['Key']}")
-                if len(matching_files) >= quantity:
-                    break
+            print(obj)
+            matching_files.append(f"https://{bucket_name}.s3.{region_name}.amazonaws.com/{obj['Key']}")
+            if len(matching_files) >= quantity:
+                break
+            # file_color = obj['Key'].split('/')[-1].split('_')[1]  # Assumes file name format "type_color.jpg"
+            # if file_color.lower() == color.lower():
 
         if not matching_files:
             return jsonify({'response': 'No suitable images found.'}), 404
 
-        return jsonify({'images': matching_files})
+        return jsonify(matching_files)
 
     except (NoCredentialsError, PartialCredentialsError) as e:
         return jsonify({'response': 'AWS credentials are not configured properly.'}), 500
     except Exception as e:
+        print(e)
         return jsonify({'response': str(e)}), 500
 
 if __name__ == '__main__':
