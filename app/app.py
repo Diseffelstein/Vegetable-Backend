@@ -16,6 +16,24 @@ logging.getLogger('s3transfer').setLevel(logging.DEBUG)
 region_name = 'eu-west-2'
 bucket_name = 'vegetables-recognition'
 
+classMapping = [
+    "Bean", # 1
+    "Bitter_Gourd", # 2
+    "Bottle_Gourd", # 3
+    "Brinjal", # 4
+    "Broccoli", # 5
+    "Cabbage", # 6
+    "Capsicum", # 7
+    "Carrot", # 8
+    "Cauliflower", # 9
+    "Cucumber",# 10
+    "Papaya", # 11
+    "Tomato", # 12
+    "Pumpkin", # 13
+    "Radish", # 14
+    "Potato" # 15
+]
+
 # Load your ONNX model
 ort_session = ort.InferenceSession('model.onnx')
 
@@ -38,7 +56,7 @@ def get_prediction(image_bytes):
     # Convert your model's prediction to a readable format
     dominant_color = "#4239ba"
     return {
-        "class": int(pred[0].item()),
+        "class": classMapping[int(pred[0].item())],
         "dominant_color": dominant_color
     }
 
